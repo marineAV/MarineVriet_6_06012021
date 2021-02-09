@@ -19,6 +19,19 @@ exports.createSauce = (req, res, next) => {
     .catch(error => res.status(400).json({ error }));
 };
 
+// GET-Récupération de toutes les sauces********************************************************
+exports.getAllSauce = (req, res, next) => {
+    Sauces.find()
+      .then(sauces => res.status(200).json(sauces))
+      .catch(error => res.status(400).json({ error }));
+};
+
+// GET-Récupération d'une sauce******************************************************************
+exports.getOneSauce = (req, res, next) => {
+    Sauces.findOne({ _id: req.params.id })
+      .then(sauces => res.status(200).json(sauces))
+      .catch(error => res.status(400).json({ error }));
+};
 
 // PUT-Modification d'une sauce******************************************************************
 exports.updateSauce = (req, res, next) => {
@@ -37,8 +50,8 @@ exports.updateSauce = (req, res, next) => {
 exports.deleteSauce = (req, res, next) => {
     Sauces.findOne({ _id: req.params.id })                       // On cherche l'élément à supprimer
     .then(sauces => {
-        const fileName = sauces.imageUrl.split('/images/')[1];  // extraction du nom du fichier à supprimer
-        fs.unkink(`images/${fileName}`, () => {                 // Chemin du fichier ...
+        const filename = sauces.imageUrl.split('/images/')[1];  // extraction du nom du fichier à supprimer
+        fs.unlink(`images/${filename}`, () => {                 // Chemin du fichier ...
             Sauces.deleteOne({ _id: req.params.id })             // ... + Callback de suppression du fichier
             .then(() => res.status(200).json({ message: 'Objet supprimé !'}))
             .catch(error => res.status(400).json({ error }));
@@ -49,49 +62,56 @@ exports.deleteSauce = (req, res, next) => {
 
 //Like ou Dislike la sauce*****************************************************************
 exports.userLikes = (req, res, next) => {
-    Sauces.findOne({ _id: req.params.id })
-    .then(sauces => {
-        switch(req.body.like){
-            case 1 :
-                //if( !l'utilisateur n'a pas déjà liké){
-                console.log("L'utilisateur a liké!")
-                //Sauces.updateOne({ _id: req.params.id },{ $inc{ likes++ }, $push{ userId}, _id: req.params.id})
-                //.then(() => res.status(200).json({ message: "Cette sauce est appréciée!"}))
-                //.catch(error => res.status(400).json({ error}))
-            //}
-            break;
+    switch(req.body.like){
+        case 1 :    // Si l'utilisateur like
+            console.log("L'utilisateur a liké!")
+            Sauces.updateOne({ _id: req.params.id },{ 
+                $inc:{ likes: 1 }, // On ajoute 1 au like
+                $push:{ usersLiked: req.body.userId }, // On envoi l'id de l'utilisateur dans le tableau "usersLiked"
+                _id: req.params.id})
+                .then(() => res.status(200).json({ message: "Cette sauce est appréciée!"}))
+                .catch(error => res.status(400).json({ error}))
+        break;
 
-            case -1 :
-                console.log("L'utilisateur a disliké!")
-                // .then(() => res.status(200).json({ message: "Cette sauce ne fait pas l'unanimité!"}))
-                // .catch(error => res.status(400).json({ error}))
-            break;
+        case -1 :    // Si l'utilisateur dislike
+            console.log("L'utilisateur a disliké!")
+            Sauces.updateOne({ _id: req.params.id },{ 
+                $inc:{ dislikes: 1 }, // On ajoute 1 au dislike
+                $push:{ usersDisliked: req.body.userId }, // On envoi l'id de l'utilisateur dans le tableau "usersDisliked"
+                _id: req.params.id})
+                .then(() => res.status(200).json({ message: "Cette sauce ne fait pas l'unanimité!"}))
+                .catch(error => res.status(400).json({ error}))
+        break;
 
-            case 0 :
+        case 0 :
+            Sauces.findOne({ _id: req.params.id })
+            .then((sauce) => {
                 console.log("L'utilisateur n'a ni liké, ni disliké!")
-                // .then(() => res.status(200).json({ message: "L'utilisateur a annulé son avis sur cette sauce!"}))
-                // .catch(error => res.status(400).json({ error}))
-            break;
+                // Si l'utilisateur annule son like
+                if(sauce.usersLiked.includes(req.body.userId)){ // Si on retrouve l'id de l'utilisateur dans l'array usersLiked...
+                    Sauces.updateOne({ _id: req.params.id },{ 
+                        $inc:{ likes: -1 }, // On retire un like
+                        $pull:{ usersLiked: req.body.userId }, // et on retire l'id de l'utilisateur du tableau correspondant
+                        _id: req.params.id})
+                        .then(() => res.status(200).json({ message: "L'utilisateur a annulé son avis favorable sur cette sauce!"}))
+                        .catch(error => res.status(400).json({ error}))
+                }// Si l'utilisateur annule son dislike
+                if(sauce.usersDisliked.includes(req.body.userId)){ // Si on retrouve l'id de l'utilisateur dans l'array usersDisliked
+                    Sauces.updateOne({ _id: req.params.id },{ 
+                        $inc:{ dislikes: -1 }, // On retire un dislike
+                        $pull:{ usersDisliked: req.body.userId }, // et on retire l'id de l'utilisateur du tableau correspondant
+                        _id: req.params.id})
+                        .then(() => res.status(200).json({ message: "L'utilisateur a annulé son avis défavorable sur cette sauce!"}))
+                        .catch(error => res.status(400).json({ error}))
+                }
+            })
+            .catch(error => res.status(500).json({ error}))    
+        break;
 
-            default :
-            throw('Temporairement indisponible!')
-        }
-        res.status(200).json({ message: 'Ca marche!'})
-    })
-    .catch(error => res.status(400).json({ error }));
+        default :
+        throw('Temporairement indisponible!')
+    }
 };
+        
 
-// GET-Récupération de toutes les sauces********************************************************
-exports.getAllSauce = (req, res, next) => {
-    Sauces.find()
-      .then(sauces => res.status(200).json(sauces))
-      .catch(error => res.status(400).json({ error }));
-};
-
-// GET-Récupération d'une sauce******************************************************************
-exports.getOneSauce = (req, res, next) => {
-    Sauces.findOne({ _id: req.params.id })
-      .then(sauces => res.status(200).json(sauces))
-      .catch(error => res.status(400).json({ error }));
-};
 
