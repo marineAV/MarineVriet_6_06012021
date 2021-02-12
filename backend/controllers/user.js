@@ -6,8 +6,24 @@ const User = require('../models/user');
 const mailValidator = require('email-validator');
 const passwordValidator = require('password-validator');
 
+var schema = new passwordValidator();
+
+schema      // schéma passwordValidator
+.is().min(7)                     // taille min
+.is().max(30)                    // taille max
+.has().uppercase()               // doit contenir des majuscules
+.has().lowercase()               // doit contenir des majuscules
+.has().digits(2)                 // doit contenir 2 chiffres
+.has().not().spaces()            // pas d'espaces
+.is().not().oneOf(['Passw0rd', 'Password123']); // le mdp n'est pas une de ces valeurs
+
 // middleware de création d'un nouveau compte user*************************************************
 exports.signup = (req, res, next) => {
+    if(!mailValidator.validate(req.body.email) || !schema.validate(req.body.password)){ 
+        //Si l'adresse mail n'est pas valide (email-validator) ou que le mdp ne correspond pas au schéma, renvoi une erreur
+        throw { error }
+    }else if(mailValidator.validate(req.body.email) && schema.validate(req.body.password)){
+        //Si l'email est valide et que le mdp correspond au schéma alors...
     bcrypt.hash(req.body.password, 10)  // hashage du mdp dans le corps de la requête + salage
     .then(hash => {                     // puis création du nouvel utilisateur
         const user = new User({
@@ -19,6 +35,7 @@ exports.signup = (req, res, next) => {
         .catch(error => res.status(400).json({ error }));
     })
     .catch(error => res.status(500).json({ error }));
+    }
 };
 
 // middleware de connection**************************************************************************
