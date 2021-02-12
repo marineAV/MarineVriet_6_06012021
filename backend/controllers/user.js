@@ -3,6 +3,9 @@ const jwt = require('jsonwebtoken');
 
 const User = require('../models/user');
 
+const mailValidator = require('email-validator');
+const passwordValidator = require('password-validator');
+
 // middleware de création d'un nouveau compte user*************************************************
 exports.signup = (req, res, next) => {
     bcrypt.hash(req.body.password, 10)  // hashage du mdp dans le corps de la requête + salage

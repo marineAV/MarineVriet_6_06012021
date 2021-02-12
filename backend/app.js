@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 const helmet = require('helmet'); // Protection des en-têtes HTTP
 const dotenv = require('dotenv').config();
+const mongoSanitize = require('express-mongo-sanitize'); //Protection contre les attaques par injection noSql
 
 const app = express(); // on appelle la méthode qui crée una app express 
 
@@ -28,6 +29,7 @@ app.use((req, res, next) => {
   });
 
 app.use(bodyParser.json()); // parse le corps de la requête automatiquement
+app.use(mongoSanitize()); 
 app.use(helmet());
 app.use('/api/sauces', sauceRoutes);
 app.use('/api/auth', userRoutes);
